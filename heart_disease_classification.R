@@ -18,7 +18,9 @@
 
 #setup========================================================================================================================================================================
 rm(list = ls())
-pacman::p_load(tidyverse, janitor, scales, rio, na.tools)
+pacman::p_load(tidyverse, janitor, scales, rio, na.tools, tictoc)
+
+tic()
 
 #import dataset=================================================================================================================================================================================
 data = rio::import("C:/Users/gamin/Downloads/archive/heart.csv") %>% 
@@ -37,10 +39,7 @@ nas = anti_join(data, na.omit(data), by = "id")
 na_rows = nrow(nas)
 
 #need to encode these, if we end up using them
-chars = names(data %>% 
-  select(where(is.character)))
-
-chars_sep = 
+strings = names(data %>% select(where(is.character)))
 
 #count by gender
 data %>% 
@@ -69,7 +68,13 @@ target_split
 #baseline for prediction (to compare to 'just guessing')
 baseline = (target_split %>% filter(heart_disease == 1))$pct
 
-#NTS
+#notes to self
 # majority male
 # most patients were asymptomatic
-# 
+# most had a normal electrocardiogram results (heart test result)
+
+#one hot encode strings
+
+
+
+toc()
