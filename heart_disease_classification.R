@@ -18,38 +18,38 @@
 
 #setup========================================================================================================================================================================
 rm(list = ls())
-pacman::p_load(tidyverse, janitor, scales, rio, na.tools, tictoc)
+pacman::p_load(tidyverse, janitor, scales, rio, na.tools, tictoc, caret, GGally)
 
 tic()
 
 #import dataset=================================================================================================================================================================================
-data = rio::import("C:/Users/gamin/Downloads/archive/heart.csv") %>% 
+heart = rio::import("C:/Users/gamin/Downloads/archive/heart.csv") %>% 
   clean_names()
 
-data = data %>% 
+heart = heart %>% 
   mutate(id = row_number(),
          across(everything(), ~ifelse(.x == "", NA, .x)),
-         heart_disease = as.factor(heart_disease))
+         heart_disease = as.factor(heart_disease),
+         exercise_angina = ifelse(exercise_angina == "Y", 1, 0))
 
 #exploration========================================================================================================================================================================
-summary(data)
+summary(heart)
 
 #na check
-nas = anti_join(data, na.omit(data), by = "id")
+nas = anti_join(heart, na.omit(heart), by = "id")
 na_rows = nrow(nas)
 
-#need to encode these, if we end up using them
-strings = names(data %>% select(where(is.character)))
+heart = heart %>% select(!id)
 
 #count by gender
-data %>% 
+heart %>% 
   count(sex) %>% 
   mutate(pct = percent(n / sum(n))) %>% 
   arrange(-n)
 
 #summarization function for strings
 counter = function(varname) {
-  data %>% 
+  heart %>% 
     count({{varname}}) %>% 
     mutate(pct = round(n / sum(n), 2)) %>% 
     arrange(-n)
@@ -74,7 +74,15 @@ baseline = (target_split %>% filter(heart_disease == 1))$pct
 # most had a normal electrocardiogram results (heart test result)
 
 #one hot encode strings
+dummy = c("sex", "chest_pain_type", "resting_ecg", "st_slope")
 
+dummy_df = heart %>% select(all_of(dummy))
+heart_df = heart %>% select(!all_of(dummy))
 
+heart = data.frame(predict(dummyVars(" ~ .", 
+                                     data = dummy_df), 
+                           newdata = dummy_df)) %>% 
+  clean_names() %>% 
+  bind_cols(heart_df)
 
 toc()
