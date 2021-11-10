@@ -40,14 +40,6 @@ summary(heart)
 nas = anti_join(heart, na.omit(heart), by = "id")
 na_rows = nrow(nas)
 
-heart = heart %>% select(!id)
-
-#count by gender
-heart %>% 
-  count(sex) %>% 
-  mutate(pct = percent(n / sum(n))) %>% 
-  arrange(-n)
-
 #summarization function for strings
 counter = function(varname) {
   heart %>% 
@@ -66,6 +58,14 @@ counter(st_slope)
 target_split = counter(heart_disease)
 target_split
 
+#baseline for prediction (to compare to 'just guessing')
+baseline = (target_split %>% filter(heart_disease == 1))$pct
+
+#notes to self
+# majority male
+# most patients were asymptomatic
+# most had a normal electrocardiogram results (heart test result)
+
 #distributions of continuous variables
 hist_fn = function(varname) {
   ggplot(data = heart,
@@ -76,20 +76,25 @@ hist_fn = function(varname) {
     scale_y_continuous(labels = comma)
 }
 
-hist_fn(resting_bp) #huge gap between 0 - 100 with a couple under 100 - investigate
-hist_fn(cholesterol) #some 0 cholesterol levels, data imputation likely needed
+hist_fn(resting_bp) #one observation has a zero resting bp - not possible unless deceased
+hist_fn(cholesterol) #some 0 cholesterol levels, data imputation likely needed. is 0 cholesterol possible?
 hist_fn(max_hr) #looks OK, normal
 hist_fn(oldpeak) #looks OK, lots have exactly zero
 
 #data imputation==================================================================================================================================================================
+#vars to impute = resting_bp, cholesterol
+missing_data_rows = heart %>% filter(resting_bp == 0 | cholesterol == 0)
 
-#baseline for prediction (to compare to 'just guessing')
-baseline = (target_split %>% filter(heart_disease == 1))$pct
+#since zero resting bp and zero cholesterol are impossible, NA them
+heart = heart %>% 
+  mutate(across(c(resting_bp), ~ifelse(.x == 0, NA, .x)))
 
-#notes to self
-# majority male
-# most patients were asymptomatic
-# most had a normal electrocardiogram results (heart test result)
+tmp = heart %>% filter(id == 450)
+
+#use caret preProcess to impute the median value for these
+heart = predict(preProcess(heart %>% select(resting_bp),
+                           method = "medianImpute"), 
+                heart)
 
 #one hot encode strings
 dummy = c("sex", "chest_pain_type", "resting_ecg", "st_slope")
@@ -104,6 +109,5 @@ heart = data.frame(predict(dummyVars(" ~ .",
   bind_cols(heart_df)
 
 #correlations
-
 
 toc()
