@@ -19,6 +19,7 @@
 #setup========================================================================================================================================================================
 rm(list = ls())
 pacman::p_load(tidyverse, janitor, scales, rio, na.tools, tictoc, caret, GGally)
+theme_set(theme_classic())
 
 tic()
 
@@ -65,6 +66,23 @@ counter(st_slope)
 target_split = counter(heart_disease)
 target_split
 
+#distributions of continuous variables
+hist_fn = function(varname) {
+  ggplot(data = heart,
+         aes(x = {{varname}})) +
+    geom_histogram() +
+    labs(title = "Variable distribution",
+         y = "Frequency") +
+    scale_y_continuous(labels = comma)
+}
+
+hist_fn(resting_bp) #huge gap between 0 - 100 with a couple under 100 - investigate
+hist_fn(cholesterol) #some 0 cholesterol levels, data imputation likely needed
+hist_fn(max_hr) #looks OK, normal
+hist_fn(oldpeak) #looks OK, lots have exactly zero
+
+#data imputation==================================================================================================================================================================
+
 #baseline for prediction (to compare to 'just guessing')
 baseline = (target_split %>% filter(heart_disease == 1))$pct
 
@@ -80,9 +98,12 @@ dummy_df = heart %>% select(all_of(dummy))
 heart_df = heart %>% select(!all_of(dummy))
 
 heart = data.frame(predict(dummyVars(" ~ .", 
-                                     data = dummy_df), 
+                                     data = dummy_df),
                            newdata = dummy_df)) %>% 
   clean_names() %>% 
   bind_cols(heart_df)
+
+#correlations
+
 
 toc()
