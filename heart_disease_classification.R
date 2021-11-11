@@ -151,5 +151,4 @@ counter(test, heart_disease)
 
 baseline
 
-
 toc()
