@@ -20,6 +20,7 @@
 rm(list = ls())
 pacman::p_load(tidyverse, janitor, scales, rio, na.tools, tictoc, caret, GGally)
 theme_set(theme_classic())
+set.seed(255)
 
 tic()
 
@@ -76,20 +77,34 @@ hist_fn = function(varname) {
     scale_y_continuous(labels = comma)
 }
 
-hist_fn(resting_bp) #one observation has a zero resting bp - not possible unless deceased
-hist_fn(cholesterol) #some 0 cholesterol levels, data imputation likely needed. is 0 cholesterol possible?
+hist_fn(resting_bp) #one observation has a zero resting bp - not possible unless deceased - impute this
+hist_fn(cholesterol) #some 0 cholesterol levels. is 0 cholesterol possible? i will assume yes...
+hist_fn(log(cholesterol)) #at least it's log normal
 hist_fn(max_hr) #looks OK, normal
 hist_fn(oldpeak) #looks OK, lots have exactly zero
 
-#data imputation==================================================================================================================================================================
-#vars to impute = resting_bp, cholesterol
-missing_data_rows = heart %>% filter(resting_bp == 0 | cholesterol == 0)
+#create string var for heart disease prevalence
+heart$heart_disease_char = ifelse(heart$heart_disease == 1, "Heart Disease", "No Heart Disease")
+
+#plot comparison of variable based on outcome 
+ggplot(data = heart,
+       aes(x = age)) +
+  geom_boxplot() +
+  coord_flip() +
+  facet_wrap(~ heart_disease_char) +
+  labs(title = "Heart disease by age",
+       subtitle = "Those who had heart disease tend to be older",
+       x = "Age")
+
+heart = heart %>% select(!c(id, heart_disease_char))
+
+#data imputation, rescaling==================================================================================================================================================================
+#vars to impute = resting_bp
+missing_data_rows = heart %>% filter(resting_bp == 0)
 
 #since zero resting bp and zero cholesterol are impossible, NA them
 heart = heart %>% 
   mutate(across(c(resting_bp), ~ifelse(.x == 0, NA, .x)))
-
-tmp = heart %>% filter(id == 450)
 
 #use caret preProcess to impute the median value for these
 heart = predict(preProcess(heart %>% select(resting_bp),
@@ -107,6 +122,12 @@ heart = data.frame(predict(dummyVars(" ~ .",
                            newdata = dummy_df)) %>% 
   clean_names() %>% 
   bind_cols(heart_df)
+
+#rescale and center continuous variables
+heart = predict(preProcess(heart %>% select(age, resting_bp, cholesterol, max_hr, oldpeak)), heart)
+
+#remove unnecessary df
+rm(dummy_df, heart_df, missing_data_rows, nas, target_split)
 
 #correlations
 
