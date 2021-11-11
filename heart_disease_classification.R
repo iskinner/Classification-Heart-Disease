@@ -1,6 +1,6 @@
 #Ian Skinner
 #2021-11-07
-#Objective: take heart disease dataset and build classification models
+#Objective: take heart disease dataset and build classification models to predict heart disease
 
 # Attribute Information
   # Age: age of the patient [years]
@@ -42,30 +42,25 @@ nas = anti_join(heart, na.omit(heart), by = "id")
 na_rows = nrow(nas)
 
 #summarization function for strings
-counter = function(varname) {
-  heart %>% 
+counter = function(df, varname) {
+  df %>% 
     count({{varname}}) %>% 
     mutate(pct = round(n / sum(n), 2)) %>% 
     arrange(-n)
 }
 
-counter(sex)
-counter(chest_pain_type)
-counter(resting_ecg)
-counter(exercise_angina)
-counter(st_slope)
+counter(heart, sex)
+counter(heart, chest_pain_type)
+counter(heart, resting_ecg)
+counter(heart, exercise_angina)
+counter(heart, st_slope)
 
 #target var split
-target_split = counter(heart_disease)
+target_split = counter(heart, heart_disease)
 target_split
 
 #baseline for prediction (to compare to 'just guessing')
 baseline = (target_split %>% filter(heart_disease == 1))$pct
-
-#notes to self
-# majority male
-# most patients were asymptomatic
-# most had a normal electrocardiogram results (heart test result)
 
 #distributions of continuous variables
 hist_fn = function(varname) {
@@ -126,9 +121,35 @@ heart = data.frame(predict(dummyVars(" ~ .",
 #rescale and center continuous variables
 heart = predict(preProcess(heart %>% select(age, resting_bp, cholesterol, max_hr, oldpeak)), heart)
 
-#remove unnecessary df
+#remove unnecessary data
 rm(dummy_df, heart_df, missing_data_rows, nas, target_split)
 
+#remove unnecessary / duplicative columns
+heart = heart %>% 
+  select(!c(sex_m)) %>% 
+  mutate(heart_disease = as.numeric(heart_disease))
+
 #correlations
+correlations = data.frame(cor(heart)) %>% 
+  mutate(across(everything(), ~round(.x, 2)))
+
+#put outcome back to factor
+heart = heart %>% 
+  mutate(heart_disease = ifelse(heart_disease == 1, "Y", "N"))
+
+#machine learning===============================================================================================================================================================
+
+#split data into training and test sets
+split = createDataPartition(heart$heart_disease, p = .7, list = F)
+
+train = data.frame(heart[ split, ])
+test = data.frame(heart[-split, ])
+
+#confirm class balances compared to baseline
+counter(train, heart_disease)
+counter(test, heart_disease)
+
+baseline
+
 
 toc()
