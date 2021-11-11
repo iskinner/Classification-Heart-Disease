@@ -25,7 +25,7 @@ set.seed(255)
 tic()
 
 #import dataset=================================================================================================================================================================================
-heart = rio::import("C:/Users/gamin/Downloads/archive/heart.csv") %>% 
+heart = rio::import("heart.csv") %>% 
   clean_names()
 
 heart = heart %>% 
