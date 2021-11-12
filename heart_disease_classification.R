@@ -164,14 +164,11 @@ counter(test, heart_disease)
 
 baseline
 
-#blank data frame for storing model results later
-results = data.frame(accuracy = as.character(),
-                     accuracy_lower = as.character(),
-                     accuracy_upper = as.character(),
-                     pos_pred_value = as.character(),
-                     neg_pred_value = as.character())
-
 #stochastic gradient boosting
+control_gbm = trainControl(method = "repeatedcv",
+                             number = 10,
+                             repeats = 10)
+
 grid_gbm = expand.grid(interaction.depth = c(1, 5, 9), 
                         n.trees = (1:20) * 10, 
                         shrinkage = 0.1,
@@ -193,9 +190,3 @@ model_gbm$results
 yhat_gbm = predict(model_gbm, test)
 cm_gbm = confusionMatrix(test$heart_disease, yhat_gbm, positive = "Y")
 cm_gbm
-
-info_collector = function(cm_name) {
-  
-}
-
-#work computer
