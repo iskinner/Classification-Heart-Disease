@@ -22,8 +22,6 @@ pacman::p_load(tidyverse, janitor, scales, rio, na.tools, tictoc, caret, GGally)
 theme_set(theme_classic())
 set.seed(255)
 
-tic()
-
 #import dataset=================================================================================================================================================================================
 heart = rio::import("heart.csv") %>% 
   clean_names()
@@ -31,7 +29,7 @@ heart = rio::import("heart.csv") %>%
 heart = heart %>% 
   mutate(id = row_number(),
          across(everything(), ~ifelse(.x == "", NA, .x)),
-         heart_disease = as.factor(heart_disease),
+         #heart_disease = as.factor(heart_disease),
          exercise_angina = ifelse(exercise_angina == "Y", 1, 0))
 
 #exploration========================================================================================================================================================================
@@ -74,7 +72,7 @@ hist_fn = function(varname) {
 
 hist_fn(resting_bp) #one observation has a zero resting bp - not possible unless deceased - impute this
 hist_fn(cholesterol) #some 0 cholesterol levels. is 0 cholesterol possible? i will assume yes...
-hist_fn(log(cholesterol)) #at least it's log normal
+hist_fn(log(cholesterol)) #it's log-normal
 hist_fn(max_hr) #looks OK, normal
 hist_fn(oldpeak) #looks OK, lots have exactly zero
 
@@ -101,7 +99,7 @@ missing_data_rows = heart %>% filter(resting_bp == 0)
 heart = heart %>% 
   mutate(across(c(resting_bp), ~ifelse(.x == 0, NA, .x)))
 
-#use caret preProcess to impute the median value for these
+#use caret preProcess to impute the median value for the one missing value
 heart = predict(preProcess(heart %>% select(resting_bp),
                            method = "medianImpute"), 
                 heart)
@@ -119,22 +117,35 @@ heart = data.frame(predict(dummyVars(" ~ .",
   bind_cols(heart_df)
 
 #rescale and center continuous variables
-heart = predict(preProcess(heart %>% select(age, resting_bp, cholesterol, max_hr, oldpeak)), heart)
+heart = predict(preProcess(heart %>% 
+                             select(age, resting_bp, cholesterol, max_hr, oldpeak),
+                           method = c("center", "scale")), 
+                heart)
 
 #remove unnecessary data
 rm(dummy_df, heart_df, missing_data_rows, nas, target_split)
 
-#remove unnecessary / duplicative columns
-heart = heart %>% 
-  select(!c(sex_m)) %>% 
-  mutate(heart_disease = as.numeric(heart_disease))
-
 #correlations
 correlations = data.frame(cor(heart)) %>% 
-  mutate(across(everything(), ~round(.x, 2)))
+  mutate(across(everything(), ~round(.x, 2))) 
 
-#put outcome back to factor
+correlations$x = row.names(correlations)
+row.names(correlations) = NULL
+
+correlations = correlations %>% 
+  relocate(x) %>% 
+  pivot_longer(!x,
+               names_to = "y",
+               values_to = "r")
+
+high_corr = correlations %>% 
+  mutate(same = ifelse(x == y, 1, 0)) %>% 
+  filter(same == 0,
+         abs(r) > 0.7)
+
+#remove unnecessary / duplicative columns, recode outcome variable
 heart = heart %>% 
+  select(!c(sex_m, st_slope_up)) %>% 
   mutate(heart_disease = ifelse(heart_disease == 1, "Y", "N"))
 
 #machine learning===============================================================================================================================================================
@@ -151,4 +162,15 @@ counter(test, heart_disease)
 
 baseline
 
-toc()
+#model 1: stochastic gradient boosting=================================================================================================================================
+model_gbm = train(heart_disease ~ ., 
+                         data = heart,
+                         method = "gbm")
+
+#in sample results
+model_gbm
+ggplot(model_gbm)
+model_gbm$bestTune
+model_gbm$results
+
+#out of sample predictions, results, accuracy
