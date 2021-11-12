@@ -172,7 +172,7 @@ control_gbm = trainControl(method = "repeatedcv",
 grid_gbm = expand.grid(interaction.depth = c(1, 5, 9), 
                         n.trees = (1:20) * 10, 
                         shrinkage = 0.1,
-                        n.minobsinnode = 10)
+                        n.minobsinnode = 5)
 
 model_gbm = train(heart_disease ~ ., 
                   data = heart,
@@ -182,7 +182,11 @@ model_gbm = train(heart_disease ~ .,
 
 #in sample results
 model_gbm
-ggplot(model_gbm)
+ggplot(model_gbm) +
+  labs(title = "Results from in-sample model training",
+       subtitle = "Model type: gradient boosting") +
+  scale_y_continuous(labels = percent)
+
 model_gbm$bestTune
 model_gbm$results
 
