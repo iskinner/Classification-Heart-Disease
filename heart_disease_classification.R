@@ -19,7 +19,7 @@
 #setup========================================================================================================================================================================
 rm(list = ls())
 options(scipen = 999)
-pacman::p_load(tidyverse, janitor, scales, rio, na.tools, tictoc, caret, GGally)
+pacman::p_load(tidyverse, janitor, scales, rio, na.tools, caret)
 theme_set(theme_classic())
 set.seed(255)
 
@@ -198,3 +198,4 @@ info_collector = function(cm_name) {
   
 }
 
+#work computer
