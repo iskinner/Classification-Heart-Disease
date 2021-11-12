@@ -18,6 +18,7 @@
 
 #setup========================================================================================================================================================================
 rm(list = ls())
+options(scipen = 999)
 pacman::p_load(tidyverse, janitor, scales, rio, na.tools, tictoc, caret, GGally)
 theme_set(theme_classic())
 set.seed(255)
@@ -146,7 +147,8 @@ high_corr = correlations %>%
 #remove unnecessary / duplicative columns, recode outcome variable
 heart = heart %>% 
   select(!c(sex_m, st_slope_up)) %>% 
-  mutate(heart_disease = ifelse(heart_disease == 1, "Y", "N"))
+  mutate(heart_disease = ifelse(heart_disease == 1, "Y", "N"),
+         heart_disease = as.factor(heart_disease))
 
 #machine learning===============================================================================================================================================================
 
@@ -162,10 +164,24 @@ counter(test, heart_disease)
 
 baseline
 
-#model 1: stochastic gradient boosting=================================================================================================================================
+#blank data frame for storing model results later
+results = data.frame(accuracy = as.character(),
+                     accuracy_lower = as.character(),
+                     accuracy_upper = as.character(),
+                     pos_pred_value = as.character(),
+                     neg_pred_value = as.character())
+
+#stochastic gradient boosting
+grid_gbm = expand.grid(interaction.depth = c(1, 5, 9), 
+                        n.trees = (1:20) * 10, 
+                        shrinkage = 0.1,
+                        n.minobsinnode = 10)
+
 model_gbm = train(heart_disease ~ ., 
-                         data = heart,
-                         method = "gbm")
+                  data = heart,
+                  method = "gbm",
+                  tuneGrid = grid_gbm,
+                  trControl = control_gbm)
 
 #in sample results
 model_gbm
@@ -174,3 +190,11 @@ model_gbm$bestTune
 model_gbm$results
 
 #out of sample predictions, results, accuracy
+yhat_gbm = predict(model_gbm, test)
+cm_gbm = confusionMatrix(test$heart_disease, yhat_gbm, positive = "Y")
+cm_gbm
+
+info_collector = function(cm_name) {
+  
+}
+
