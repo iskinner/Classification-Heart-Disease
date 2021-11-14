@@ -19,7 +19,7 @@
 #setup========================================================================================================================================================================
 rm(list = ls())
 options(scipen = 999)
-pacman::p_load(tidyverse, janitor, scales, rio, na.tools, caret)
+pacman::p_load(tidyverse, janitor, scales, rio, na.tools, caret, gbm)
 theme_set(theme_classic())
 set.seed(255)
 
@@ -189,6 +189,12 @@ ggplot(model_gbm) +
 
 model_gbm$bestTune
 model_gbm$results
+
+#feature importance
+importance = varImp(model_gbm)
+importance
+
+ggplot(importance)
 
 #out of sample predictions, results, accuracy
 yhat_gbm = predict(model_gbm, test)
