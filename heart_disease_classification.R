@@ -30,8 +30,8 @@ heart = rio::import("heart.csv") %>%
 heart = heart %>% 
   mutate(id = row_number(),
          across(everything(), ~ifelse(.x == "", NA, .x)),
-         #heart_disease = as.factor(heart_disease),
-         exercise_angina = ifelse(exercise_angina == "Y", 1, 0))
+         exercise_angina = case_when(exercise_angina == "Y" ~ 1,
+                                     exercise_angina == "N" ~ 0))
 
 #exploration========================================================================================================================================================================
 summary(heart)
