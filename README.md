@@ -1,4 +1,4 @@
-You can find a full write-up and user-friendly code walkthrough of this analysis here
+You can find a full write-up and user-friendly code walkthrough of this analysis here:
 
 https://www.kaggle.com/ikskinne/classification-heart-disease
 
