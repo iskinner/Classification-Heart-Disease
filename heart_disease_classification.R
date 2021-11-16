@@ -80,16 +80,14 @@ hist_fn(oldpeak) #looks OK, lots have exactly zero
 #create string var for heart disease prevalence
 heart$heart_disease_char = ifelse(heart$heart_disease == 1, "Heart Disease", "No Heart Disease")
 
-#plot comparison of variable based on outcome 
-ggplot(data = heart,
-       aes(x = age)) +
-  geom_boxplot() +
-  coord_flip() +
-  facet_wrap(~ heart_disease_char) +
-  labs(title = "Heart disease by age",
-       subtitle = "Those who had heart disease tend to be older",
-       x = "Age")
+#get stats of features based on outcome variable
 
+#if continuous, take avg by heart disease group
+#if categorical, take avg heart disease by categorical group
+con = heart %>%
+  select(heart_disease_char, age, resting_bp, cholesterol, fasting_bs, max_hr, exercise_angina, oldpeak) %>% 
+  group_by(heart_disease_char) %>% 
+  summarise_all(.funs = "mean")
 heart = heart %>% select(!c(id, heart_disease_char))
 
 #data imputation, rescaling==================================================================================================================================================================
