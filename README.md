@@ -2,7 +2,6 @@ You can find a full write-up and user-friendly code walkthrough of this analysis
 
 https://www.kaggle.com/ikskinne/classification-heart-disease
 
-xxxxx
 ---
 Repository Dictionary (important files)
 
