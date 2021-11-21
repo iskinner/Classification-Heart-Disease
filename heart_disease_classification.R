@@ -81,19 +81,15 @@ hist_fn(oldpeak) #looks OK, lots have exactly zero
 heart$heart_disease_char = ifelse(heart$heart_disease == 1, "Heart Disease", "No Heart Disease")
 
 #summary table for continuous variables
-con = heart %>%
+heart %>%
   select(heart_disease_char, age, resting_bp, cholesterol, fasting_bs, max_hr, exercise_angina, oldpeak) %>% 
   group_by(heart_disease_char) %>% 
   summarise_all(.funs = "mean")
 
-#categorical variables
-cat = heart %>% 
-  select(sex, chest_pain_type, resting_ecg, st_slope)
-
+#data imputation, rescaling==================================================================================================================================================================
 #remove unnecessary variables
 heart = heart %>% select(!c(id, heart_disease_char))
 
-#data imputation, rescaling==================================================================================================================================================================
 heart = heart %>% 
   mutate(across(c(resting_bp, cholesterol), ~ifelse(.x == 0, NA, .x)))
 
@@ -111,9 +107,11 @@ heart = predict(preProcess(heart,
 hist_fn(cholesterol)
 
 #check out new cholestrol averages by target variable
-chol = heart %>% 
+heart %>% 
   group_by(heart_disease) %>% 
-  summarise(avg_cholesterol = mean(cholesterol))
+  summarise(avg_cholesterol = mean(cholesterol)) %>% 
+  ungroup() %>% 
+  mutate(avg_cholesterol = comma(avg_cholesterol, accuracy = .01))
 
 #one hot encode strings
 dummy = c("sex", "chest_pain_type", "resting_ecg", "st_slope")
@@ -149,7 +147,8 @@ correlations = correlations %>%
                names_to = "y",
                values_to = "r")
 
-high_corr = correlations %>% 
+#look at highly correlated variables
+correlations %>% 
   mutate(same = ifelse(x == y, 1, 0)) %>% 
   filter(same == 0,
          abs(r) > 0.7)
@@ -202,7 +201,6 @@ model_gbm$results
 
 #feature importance
 importance = varImp(model_gbm)
-importance
 
 ggplot(importance)
 
