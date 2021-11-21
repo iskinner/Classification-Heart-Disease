@@ -19,7 +19,7 @@
 #setup========================================================================================================================================================================
 rm(list = ls())
 options(scipen = 999)
-pacman::p_load(tidyverse, janitor, scales, rio, na.tools, caret, gbm)
+pacman::p_load(tidyverse, janitor, scales, rio, na.tools, caret, RANN, gbm)
 theme_set(theme_classic())
 set.seed(255)
 
@@ -72,36 +72,48 @@ hist_fn = function(varname) {
 }
 
 hist_fn(resting_bp) #one observation has a zero resting bp - not possible unless deceased - impute this
-hist_fn(cholesterol) #some 0 cholesterol levels. is 0 cholesterol possible? i will assume yes...
+hist_fn(cholesterol) #some 0 cholesterol levels. is 0 cholesterol possible? don't think so
 hist_fn(log(cholesterol)) #it's log-normal
 hist_fn(max_hr) #looks OK, normal
 hist_fn(oldpeak) #looks OK, lots have exactly zero
 
-#create string var for heart disease prevalence
+#create ID name
 heart$heart_disease_char = ifelse(heart$heart_disease == 1, "Heart Disease", "No Heart Disease")
 
-#get stats of features based on outcome variable
-
-#if continuous, take avg by heart disease group
-#if categorical, take avg heart disease by categorical group
+#summary table for continuous variables
 con = heart %>%
   select(heart_disease_char, age, resting_bp, cholesterol, fasting_bs, max_hr, exercise_angina, oldpeak) %>% 
   group_by(heart_disease_char) %>% 
   summarise_all(.funs = "mean")
+
+#categorical variables
+cat = heart %>% 
+  select(sex, chest_pain_type, resting_ecg, st_slope)
+
+#remove unnecessary variables
 heart = heart %>% select(!c(id, heart_disease_char))
 
 #data imputation, rescaling==================================================================================================================================================================
-#vars to impute = resting_bp
-missing_data_rows = heart %>% filter(resting_bp == 0)
-
-#since zero resting bp and zero cholesterol are impossible, NA them
 heart = heart %>% 
-  mutate(across(c(resting_bp), ~ifelse(.x == 0, NA, .x)))
+  mutate(across(c(resting_bp, cholesterol), ~ifelse(.x == 0, NA, .x)))
 
-#use caret preProcess to impute the median value for the one missing value
+#use caret preProcess to impute the median value for the one missing value in resting_bp
 heart = predict(preProcess(heart %>% select(resting_bp),
                            method = "medianImpute"), 
                 heart)
+
+#for cholesterol, use bag imputation since there's quite a lot of missing data
+heart = predict(preProcess(heart,
+                           method = "bagImpute"),
+                heart)
+
+#re-plot cholesterol
+hist_fn(cholesterol)
+
+#check out new cholestrol averages by target variable
+chol = heart %>% 
+  group_by(heart_disease) %>% 
+  summarise(avg_cholesterol = mean(cholesterol))
 
 #one hot encode strings
 dummy = c("sex", "chest_pain_type", "resting_ecg", "st_slope")
@@ -115,14 +127,14 @@ heart = data.frame(predict(dummyVars(" ~ .",
   clean_names() %>% 
   bind_cols(heart_df)
 
-#rescale and center continuous variables
+#rescale and center variables
 heart = predict(preProcess(heart %>% 
                              select(age, resting_bp, cholesterol, max_hr, oldpeak),
                            method = c("center", "scale")), 
                 heart)
 
-#remove unnecessary data
-rm(dummy_df, heart_df, missing_data_rows, nas, target_split)
+#remove unnecessary stuff
+rm(dummy_df, heart_df, nas, target_split)
 
 #correlations
 correlations = data.frame(cor(heart)) %>% 
@@ -142,7 +154,7 @@ high_corr = correlations %>%
   filter(same == 0,
          abs(r) > 0.7)
 
-#remove unnecessary / duplicative columns, recode outcome variable
+#remove highly correlative / unnecessary / duplicative columns, recode outcome variable
 heart = heart %>% 
   select(!c(sex_m, st_slope_up)) %>% 
   mutate(heart_disease = ifelse(heart_disease == 1, "Y", "N"),
