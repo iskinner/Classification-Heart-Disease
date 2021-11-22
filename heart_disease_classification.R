@@ -178,13 +178,13 @@ control_gbm = trainControl(method = "repeatedcv",
                            number = 10,
                            repeats = 10)
 
-grid_gbm = expand.grid(interaction.depth = c(1, 3, 5), 
-                        n.trees = (1:20) * 20, 
-                        shrinkage = 0.05,
-                        n.minobsinnode = 1)
+grid_gbm = expand.grid(interaction.depth = c(1, 3, 5),
+                       n.trees = (1:10) * 10,
+                       shrinkage = 0.1,
+                       n.minobsinnode = 10)
 
-model_gbm = train(heart_disease ~ ., 
-                  data = heart,
+model_gbm = train(heart_disease ~ .,
+                  data = train,
                   method = "gbm",
                   tuneGrid = grid_gbm,
                   trControl = control_gbm)
